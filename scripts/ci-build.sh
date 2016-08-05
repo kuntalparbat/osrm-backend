@@ -39,8 +39,9 @@ function install_build_deps() {
 }
 
 function main() {
-    if [[ -d build ]]; then
-        echo "$(pwd)/build already exists, please delete before re-running"
+    export BUILD_DIR="$(pwd)/build"
+    if [[ -d "${BUILD_DIR}" ]]; then
+        echo "${BUILD_DIR} already exists, please delete before re-running"
         exit 1
     fi
     # setup mason and deps
@@ -58,7 +59,7 @@ function main() {
     if [[ ${NM:-false} != false ]]; then
         export CMAKE_EXTRA_ARGS="${CMAKE_EXTRA_ARGS} -DCMAKE_NM=${NM}"
     fi
-    mkdir build && cd build
+    mkdir ${BUILD_DIR} && cd ${BUILD_DIR}
     ${CMAKE_PATH}/cmake ../ -DCMAKE_INSTALL_PREFIX=${INSTALL_PREFIX} \
       -DCMAKE_CXX_COMPILER="${CXX}" \
       -DBoost_NO_SYSTEM_PATHS=ON \
@@ -76,47 +77,62 @@ function main() {
     make --jobs=${JOBS}
     make tests --jobs=${JOBS}
     make benchmarks --jobs=${JOBS}
+    if [[ $(uname -s) == 'Linux' ]]; then
+        # make it possible to find libtbb shared libs at custom location
+        export LD_LIBRARY_PATH=${MASON_HOME}/lib:${LD_LIBRARY_PATH}
+    fi
+    # before installing, lets fix the tools and (if it exists) the libosrm shared lib
+    # for OS X so they can find the shared libtbb libs
+    # on OSX DYLD_LIBRARY_PATH does not work well (not inherited in shells)
+    # so to support libraries on custom paths we fix linking using install_name_tool
+    if [[ $(uname -s) == 'Darwin' ]]; then
+        for tool in $(ls ${BUILD_DIR}/osrm-*); do
+          install_name_tool -change libtbb.dylib ${MASON_HOME}/lib/libtbb.dylib ${tool}
+          install_name_tool -change libtbbmalloc.dylib ${MASON_HOME}/lib/libtbbmalloc.dylib ${tool}
+        done
+        if [[ -f ${BUILD_DIR}/libosrm.dylib ]]; then
+          install_name_tool -change libtbb.dylib ${MASON_HOME}/lib/libtbb.dylib ${BUILD_DIR}/libosrm.dylib
+          install_name_tool -change libtbbmalloc.dylib ${MASON_HOME}/lib/libtbbmalloc.dylib ${BUILD_DIR}/libosrm.dylib
+        fi
+
+        # fix the local/non-installed unit tests
+        install_name_tool -change libosrm.dylib ${BUILD_DIR}/libosrm.dylib example/build/osrm-example
+        install_name_tool -change libtbb.dylib ${MASON_HOME}/lib/libtbb.dylib example/build/osrm-example
+        install_name_tool -change libtbbmalloc.dylib ${MASON_HOME}/lib/libtbbmalloc.dylib example/build/osrm-example
+
+        for tool in $(ls ${BUILD_DIR}/unit_tests/*-tests); do
+          install_name_tool -change libtbb.dylib ${MASON_HOME}/lib/libtbb.dylib ${tool}
+          install_name_tool -change libtbbmalloc.dylib ${MASON_HOME}/lib/libtbbmalloc.dylib ${tool}
+        done
+    fi
+
     make install
     export PKG_CONFIG_PATH=${INSTALL_PREFIX}/lib/pkgconfig
     cd ../
+    rm -rf example/build
     mkdir -p example/build
     cd example/build
     ${CMAKE_PATH}/cmake ../ -DCMAKE_BUILD_TYPE=${BUILD_TYPE}
     make
+    if [[ $(uname -s) == 'Darwin' ]]; then
+        # fix the example links
+        install_name_tool -change libosrm.dylib ${BUILD_DIR}/libosrm.dylib ./osrm-example
+        install_name_tool -change libtbb.dylib ${MASON_HOME}/lib/libtbb.dylib ./osrm-example
+        install_name_tool -change libtbbmalloc.dylib ${MASON_HOME}/lib/libtbbmalloc.dylib ./osrm-example
+    fi
     cd ../../
-    cp ${MASON_HOME}/lib/libtbb* ./build/
-    if [[ $(uname -s) == 'Darwin' ]]; then
-        for tool in $(ls build/osrm-*); do
-          install_name_tool -change libtbb.dylib @loader_path/libtbb.dylib ${tool}
-          install_name_tool -change libtbbmalloc.dylib @loader_path/libtbbmalloc.dylib ${tool}
-        done
-
-        for tool in $(ls build/unit_tests/*-tests); do
-          install_name_tool -change libtbb.dylib @loader_path/../libtbb.dylib ${tool}
-          install_name_tool -change libtbbmalloc.dylib @loader_path/../libtbbmalloc.dylib ${tool}
-        done
-
-        if [[ -f build/libosrm.dylib ]]; then
-          install_name_tool -change libtbb.dylib @loader_path/libtbb.dylib build/libosrm.dylib
-          install_name_tool -change libtbbmalloc.dylib @loader_path/libtbbmalloc.dylib build/libosrm.dylib
-        fi
-    fi
     make -C test/data clean || true
+    make -C test/data
     make -C test/data benchmark
-    if [[ $(uname -s) == 'Darwin' ]]; then
-        install_name_tool -change libosrm.dylib @loader_path/../../build/libosrm.dylib example/build/osrm-example
-        install_name_tool -change libtbb.dylib @loader_path/../../build/libtbb.dylib example/build/osrm-example
-        install_name_tool -change libtbbmalloc.dylib @loader_path/../../build/libtbbmalloc.dylib example/build/osrm-example
-    fi
     ./example/build/osrm-example test/data/monaco.osrm
-    cd build
+    cd ${BUILD_DIR}
     ./unit_tests/library-tests ../test/data/monaco.osrm
     ./unit_tests/extractor-tests
     ./unit_tests/engine-tests
     ./unit_tests/util-tests
     ./unit_tests/server-tests
     cd ../
-    echo Y | ./build/osrm-springclean
+    echo Y | ${BUILD_DIR}/osrm-springclean
     npm test
 }
 

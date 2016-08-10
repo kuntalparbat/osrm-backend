@@ -170,8 +170,7 @@ Intersection TurnHandler::handleThreeWayTurn(const EdgeID via_edge, Intersection
     {
         std::cout << "Name IDs: " << (int)in_data.name_id << " " << (int)first_data.name_id << " "
                   << (int)second_data.name_id << std::endl;
-        if (obvious_index == 1 &&
-            (in_data.name_id != second_data.name_id || first_data.name_id == second_data.name_id))
+        if (obvious_index == 1)
         {
             std::cout << "Assigning Obvious first" << std::endl;
             intersection[1].turn.instruction = getInstructionForObvious(
@@ -183,8 +182,7 @@ Intersection TurnHandler::handleThreeWayTurn(const EdgeID via_edge, Intersection
                                                 getTurnDirection(intersection[1].turn.angle)};
         }
 
-        if (obvious_index == 2 &&
-            (in_data.name_id != first_data.name_id || first_data.name_id == second_data.name_id))
+        if (obvious_index == 2)
         {
             std::cout << "Assigning Obvious Second" << std::endl;
             intersection[2].turn.instruction = getInstructionForObvious(

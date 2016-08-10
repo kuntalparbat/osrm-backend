@@ -16,9 +16,9 @@ Feature: Continue Instructions
             | bd     | primary |
 
        When I route I should get
-            | waypoints | route       | turns                       |
-            | a,c       | abc,abc,abc | depart,continue left,arrive |
-            | a,d       | abc,bd,bd   | depart,turn straight,arrive |
+            | waypoints | route       | turns                           |
+            | a,c       | abc,abc,abc | depart,continue left,arrive     |
+            | a,d       | abc,bd,bd   | depart,new name straight,arrive |
 
     Scenario: Road turning left and straight
         Given the node map
@@ -64,9 +64,9 @@ Feature: Continue Instructions
             | bd     | primary |
 
        When I route I should get
-            | waypoints | route       | turns                        |
-            | a,c       | abc,abc,abc | depart,continue right,arrive |
-            | a,d       | abc,bd,bd   | depart,turn straight,arrive  |
+            | waypoints | route       | turns                            |
+            | a,c       | abc,abc,abc | depart,continue right,arrive     |
+            | a,d       | abc,bd,bd   | depart,new name straight,arrive  |
 
     Scenario: Road turning slight left
         Given the node map

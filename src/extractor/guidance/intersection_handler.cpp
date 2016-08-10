@@ -69,6 +69,7 @@ TurnInstruction IntersectionHandler::getInstructionForObvious(const std::size_t 
                                                               const bool through_street,
                                                               const ConnectedRoad &road) const
 {
+    std::cout << "Looking for obvious turn onto : " << through_street << std::endl;
     const auto type = findBasicTurnType(via_edge, road);
     // handle travel modes:
     const auto in_mode = node_based_graph.GetEdgeData(via_edge).travel_mode;

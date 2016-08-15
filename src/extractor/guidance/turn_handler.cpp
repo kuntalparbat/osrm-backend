@@ -126,9 +126,6 @@ bool TurnHandler::isObviousOfTwo(const EdgeID via_edge,
 
 Intersection TurnHandler::handleThreeWayTurn(const EdgeID via_edge, Intersection intersection) const
 {
-    const auto &in_data = node_based_graph.GetEdgeData(via_edge);
-    const auto &first_data = node_based_graph.GetEdgeData(intersection[1].turn.eid);
-    const auto &second_data = node_based_graph.GetEdgeData(intersection[2].turn.eid);
     const auto obvious_index = findObviousTurn(via_edge, intersection);
     BOOST_ASSERT(intersection[0].turn.angle < 0.001);
     /* Two nearly straight turns -> FORK

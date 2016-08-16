@@ -446,8 +446,10 @@ Intersection IntersectionGenerator::AdjustForJoiningRoads(const NodeID node_at_i
     if (intersection.size() <= 1)
         return intersection;
 
-    for (auto &road : intersection)
+    // never adjust u-turns
+    for( std::size_t index = 1; index < intersection.size(); ++index )
     {
+        auto &road = intersection[index];
         // to find out about the above situation, we need to look at the next intersection (at d in
         // the example). If the initial road can be merged to the left/right, we are about to adjust
         // the angle.
